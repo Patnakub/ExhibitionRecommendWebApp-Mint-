@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>เส้นทางไปนิทรรศการ</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f7f9fb;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: auto;
+      display: flex;
+      gap: 24px;
+    }
+
+    #map {
+      width: 100%;
+      height: 500px;
+      border-radius: 16px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    }
+
+    .bus-container {
+      background: white;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+      flex: 1;
+    }
+
+    .bus-stop {
+      padding: 12px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .bus-stop:last-child {
+      border-bottom: none;
+    }
+
+    .bus-stop h3 {
+      margin: 0;
+      font-size: 1.1em;
+      color: #1d3557;
+    }
+
+    .info {
+      font-size: 0.95em;
+      color: #444;
+      margin-top: 4px;
+    }
+
+    .price {
+      margin-top: 8px;
+      font-size: 1.1em;
+      color: #1d3557;
+    }
+
+    .input-controls {
+      max-width: 1200px;
+      margin: auto;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .input-controls input, .input-controls button {
+      padding: 8px 12px;
+      margin: 6px;
+      font-size: 1em;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    .input-controls button {
+      background-color: #1d3557;
+      color: white;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .input-controls button:hover {
+      background-color: #457b9d;
+    }
+
+    #route-result {
+      max-width: 1000px;
+      margin: 20px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      font-size: 1em;
+    }
+  </style>
+  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_API_KEY_HERE"></script>
+</head>
+<body>
+  <datalist id="stop-suggestions"></datalist>
+  <h2 style="text-align:center;">🗺️ เส้นทางไปนิทรรศการด้วยรถสาธารณะ</h2>
+
+  <div class="input-controls">
+    <input list="stop-suggestions" id="startStopInput" placeholder="กรอกชื่อป้าย หรือ @lat,lng" size="40">
+    <button onclick="useMyLocation()">📍 ใช้พิกัดของฉัน</button>
+    <button onclick="suggestRoute()">🔍 ค้นหาเส้นทาง</button>
+  </div>
+
+  <div id="route-result"></div>
+
+  <div class="container">
+    <div class="bus-container">
+      <h3>🚍 ป้ายรถเมล์ใกล้บริเวณ</h3>
+      <div id="bus-list"></div>
+    </div>
+    <div style="flex: 1;">
+      <div id="map"></div>
+    </div>
+  </div>
+
+  <script>
+    const exhibitionId = new URLSearchParams(window.location.search).get("id");
+    let map, exhibitionLatLng = null;
+    let allStops = [];
+
+    async function initPage() {
+      const [exhibition, busStops] = await Promise.all([
+        fetch(`http://localhost:5000/exhibitions/${exhibitionId}`).then(r => r.json()),
+        fetch(`http://localhost:5000/exhibitions/${exhibitionId}/nearby-bus`).then(r => r.json())
+      ]);
+
+      exhibitionLatLng = {
+        lat: parseFloat(exhibition.latitude),
+        lng: parseFloat(exhibition.longitude)
+      };
+
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: exhibitionLatLng,
+        zoom: 15
+      });
+
+      new google.maps.Marker({
+        position: exhibitionLatLng,
+        map,
+        icon: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+        title: "📍 Exhibition"
+      });
+
+      const busList = document.getElementById("bus-list");
+      busStops.sort((a, b) => a.distance - b.distance);
+      busStops.forEach((stop, i) => {
+        const lat = parseFloat(stop.latitude);
+        const lng = parseFloat(stop.longitude);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          new google.maps.Marker({
+            position: { lat, lng },
+            map,
+            title: stop.stop_name
+          });
+        }
+
+        const div = document.createElement("div");
+        div.className = "bus-stop";
+
+        const routeList = (stop.routes || []).map(r => `
+          <li><strong>สาย ${r.short_name}</strong> - ${r.long_name?.split(/;|,|\(/)[0]}</li>
+        `).join('') || '<li>ไม่มีข้อมูล</li>';
+
+        let price = 'ยังไม่มีข้อมูล';
+        if (typeof stop.min_price === 'number' && typeof stop.max_price === 'number') {
+          price = stop.min_price === stop.max_price
+            ? `${stop.min_price} บาท`
+            : `${stop.min_price} - ${stop.max_price} บาท`;
+        }
+
+        div.innerHTML = `
+          <h3>🅿️ ${i + 1}. ${stop.stop_name}</h3>
+          <div class="info">📏 ระยะห่าง: ${Math.round(stop.distance)} เมตร</div>
+          <div class="info">🚍 เส้นทาง:</div>
+          <ul>${routeList}</ul>
+          <div class="price">💰 ค่าโดยสาร: <strong>${price}</strong></div>
+        `;
+
+        busList.appendChild(div);
+      });
+    }
+
+    async function loadAllStops() {
+      const res = await fetch('http://localhost:5000/bus-routes/all-stops');
+      allStops = await res.json();
+
+      const datalist = document.getElementById("stop-suggestions");
+      datalist.innerHTML = allStops.map(stop =>
+        `<option value="${stop.stop_name}"></option>`
+      ).join('');
+    }
+
+    function useMyLocation() {
+      navigator.geolocation.getCurrentPosition(pos => {
+        const coords = pos.coords;
+        document.getElementById("startStopInput").value = `@${coords.latitude},${coords.longitude}`;
+      }, () => alert("ไม่สามารถใช้ตำแหน่งได้"));
+    }
+
+    function suggestRoute() {
+      const input = document.getElementById("startStopInput").value.trim();
+      const resultContainer = document.getElementById("route-result");
+      if (!exhibitionLatLng) return alert("ยังไม่มีพิกัดนิทรรศการ");
+
+      let lat, lng;
+
+      if (input.startsWith("@")) {
+        [lat, lng] = input.slice(1).split(",").map(parseFloat);
+      } else {
+        const matched = allStops.find(s => s.stop_name === input);
+        if (!matched) {
+          resultContainer.innerHTML = `<p style="color:red;">ไม่พบชื่อป้ายนี้</p>`;
+          return;
+        }
+        lat = matched.lat;
+        lng = matched.lon;
+      }
+
+      const url = `http://localhost:5000/bus-routes/suggest-route?lat=${lat}&lng=${lng}&exLat=${exhibitionLatLng.lat}&exLng=${exhibitionLatLng.lng}`;
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          console.log("⭐️ data from backend:", data);
+          displayRoutes(data);
+        })
+        .catch(() => {
+          resultContainer.innerHTML = `<p style="color:red;">เกิดข้อผิดพลาด</p>`;
+        });
+    }
+
+    function displayRoutes(data) {
+      const resultContainer = document.getElementById("route-result");
+
+      if (!data || !Array.isArray(data.routes) || data.routes.length === 0) {
+        resultContainer.innerHTML = `<p style="color:red;">ไม่พบเส้นทาง</p>`;
+        return;
+      }
+
+      // คัดเลือก 3 เส้นทางที่ดีที่สุด
+      const scoredRoutes = data.routes.map(route => {
+        const leg = route.legs[0];
+        const steps = leg.steps;
+
+        let transitCount = 0;
+        let totalDuration = leg.duration.value;
+        let hasRail = false;
+
+        steps.forEach(s => {
+          if (s.travel_mode === "TRANSIT") {
+            transitCount++;
+            const type = s.transit_details?.line?.vehicle?.type?.toUpperCase();
+            if (type === "HEAVY_RAIL" || type === "SUBWAY" || type === "RAIL") {
+              hasRail = true;
+            }
+          }
+        });
+
+        return {
+          route,
+          transitCount,
+          totalDuration,
+          priority: hasRail ? 1 : 2
+        };
+      });
+
+      // เรียงลำดับตามความง่าย
+      scoredRoutes.sort((a, b) => {
+        if (a.priority !== b.priority) return a.priority - b.priority;
+        if (a.transitCount !== b.transitCount) return a.transitCount - b.transitCount;
+        return a.totalDuration - b.totalDuration;
+      });
+
+      // คัดกรองไม่ให้ซ้ำ
+      const uniqueRoutes = [];
+      const seenKeys = new Set();
+
+      for (const item of scoredRoutes) {
+        const key = item.route.legs[0].steps
+          .filter(s => s.travel_mode === "TRANSIT")
+          .map(s => s.transit_details?.line?.short_name)
+          .join("-");
+
+        if (!seenKeys.has(key)) {
+          uniqueRoutes.push(item.route);
+          seenKeys.add(key);
+        }
+
+        if (uniqueRoutes.length >= 3) break;
+      }
+
+      // แสดงผล
+      resultContainer.innerHTML = `<h3>⏱️ แผนการเดินทางที่ง่ายที่สุด</h3>`;
+
+      uniqueRoutes.forEach((route, idx) => {
+        const leg = route.legs[0];
+        const steps = leg.steps;
+        const mergedSteps = [];
+        let totalFare = 0;
+
+        for (let i = 0; i < steps.length; i++) {
+          const step = steps[i];
+
+          if (step.travel_mode === "WALKING") {
+            let totalDistance = step.distance.value;
+            let totalDuration = step.duration.value;
+
+            while (
+              i + 1 < steps.length &&
+              steps[i + 1].travel_mode === "WALKING"
+            ) {
+              i++;
+              totalDistance += steps[i].distance.value;
+              totalDuration += steps[i].duration.value;
+            }
+
+            mergedSteps.push(`🚶 เดิน ${(totalDistance / 1000).toFixed(2)} km (${Math.round(totalDuration / 60)} นาที)`);
+          } else if (step.travel_mode === "TRANSIT") {
+            const t = step.transit_details;
+            const fare = step.fare?.value || t.fare?.value || 0;
+            if (fare > 0) totalFare += fare;
+
+            mergedSteps.push(`
+              🚌 ขึ้น <strong>สาย ${t.line.short_name}</strong> (${t.line.name})<br>
+              จาก "<strong>${t.departure_stop.name}</strong>" 
+              → "<strong>${t.arrival_stop.name}</strong>" (${t.num_stops} ป้าย)
+            `);
+          }
+        }
+
+        const totalFareText = totalFare > 0 ? `${(totalFare / 100).toFixed(2)} บาท` : 'ไม่มีข้อมูล';
+
+        resultContainer.innerHTML += `
+          <div style="margin-bottom:24px; padding:16px; border-radius:12px; background:#f9f9f9; border:1px solid #ddd">
+            <h4>🔹 เส้นทางที่ ${idx + 1}</h4>
+            <div>🕒 <strong>${leg.duration.text}</strong> | 📏 <strong>${leg.distance.text}</strong></div>
+            <ol>${mergedSteps.map(s => `<li>${s}</li>`).join('')}</ol>
+          </div>
+        `;
+      });
+    }
+
+
+    window.onload = async () => {
+      await initPage();
+      await loadAllStops();
+    };
+  </script>
+</body>
+</html>

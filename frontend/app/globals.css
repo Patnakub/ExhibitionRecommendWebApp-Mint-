@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --color-primary: #5372A4;
+  --color-secondary: #FFA3A3;
+  --color-tertiary: #9EBAC8;
+  --color-text: #171717; 
+  --font-geist-sans: 'Geist', sans-serif;
+  --font-geist-mono: 'Geist Mono', monospace;
+  --font-playball: 'Playball', cursive;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Work Sans, sans-serif;
+}
+
+p, h2, h3, h4, h5, h6, span {
+  color: var(--color-text);
+}
+
+h1 {
+  color: var(--color-primary);
+}
+p {
+  color: #8a8888;
+}
+
+@layer utilities {
+  @keyframes scroll-x {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  .carousel {
+    animation: scroll-x 30s linear infinite;
+  }
+
+  .paused {
+    animation-play-state: paused !important;
+  }
+
+  .carousel-item {
+    min-width: 180px;
+  }
+
+  .client-image {
+    width: 180px;
+    height: 120px;
+  }
+
+  .carousel-container::-webkit-scrollbar {
+    display: none;
+  }
+}
