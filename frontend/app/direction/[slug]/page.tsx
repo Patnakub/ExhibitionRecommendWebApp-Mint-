@@ -113,7 +113,7 @@ export default function DirectionPage() {
         const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
         if (!existingScript) {
           const script = document.createElement('script');
-          script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_API_KEY_HERE&callback=initMap&libraries=places`;
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&callback=initMap&libraries=places`;
           script.async = true;
           script.defer = true;
           

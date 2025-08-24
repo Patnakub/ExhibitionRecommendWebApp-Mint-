@@ -5,14 +5,19 @@ from pymongo import MongoClient
 from datetime import datetime
 import sys
 import time
+import os
+from dotenv import load_dotenv
 sys.stdout.reconfigure(encoding='utf-8')
+
+# Load environment variables
+load_dotenv()
 
 start_time = time.time()
 
 # --------------------------
 # ✅ CONFIG
 # --------------------------
-MONGO_URI = "mongodb://YOUR_MONGODB_URI_HERE/exhibition_db"
+MONGO_URI = os.getenv('MONGO_URI')
 client = MongoClient(MONGO_URI)
 
 db = client["exhibition_db"]

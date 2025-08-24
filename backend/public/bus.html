@@ -95,7 +95,18 @@
       font-size: 1em;
     }
   </style>
-  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_API_KEY_HERE"></script>
+  <script>
+    // Load Google Maps API with key from backend
+    fetch('/api/config')
+      .then(res => res.json())
+      .then(config => {
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${config.googleApiKey}`;
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+      });
+  </script>
 </head>
 <body>
   <datalist id="stop-suggestions"></datalist>
