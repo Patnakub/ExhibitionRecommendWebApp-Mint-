@@ -102,10 +102,10 @@ const ProfilePage: React.FC = () => {
           </h1>
           <div className="px-10 overflow-x-auto">
             <ul className="flex gap-8 min-w-max">
-              {favorites.length === 0 ? (
+              {!favorites || favorites.length === 0 ? (
                 <li className="text-gray-500">ยังไม่มีรายการโปรด</li>
               ) : (
-                favorites.map((fav) => {
+                Array.isArray(favorites) && favorites.map((fav) => {
                   const imgPath = fav.exhibition_id.cover_picture || "";
                   const src = imgPath.startsWith("http")
                     ? imgPath
