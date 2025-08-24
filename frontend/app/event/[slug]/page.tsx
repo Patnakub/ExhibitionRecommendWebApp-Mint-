@@ -162,10 +162,10 @@ export default function EventDetailPage() {
           </div>
         </div>
 
-        <div className="flex justify-center mb-4">
+        <div className="flex justify-center mb-4 ">
           <CardContainer className="inter-var">
             <CardBody
-              className="bg-gradient-to-br from-[#d0e6f7] to-[#ffd1dc] w-[736px] rounded-3xl shadow-2xl p-6"
+              className="bg-gradient-to-br from-[#d0e6f7] to-[#ffd1dc] w-[736px] rounded-3xl shadow-2xl p-6 overflow-hidden text-ellipsis"
             >
               <h2 className="text-2xl font-semibold !text-[#5b78a4] mb-4">About Exhibition</h2>
               <div

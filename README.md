@@ -195,12 +195,7 @@ cd elasticsearch-thai
 docker build -t elasticsearch-thai .
 
 # เรียกใช้ Elasticsearch container
-docker run -d \
-  --name elasticsearch-thai \
-  -p 9200:9200 \
-  -e "discovery.type=single-node" \
-  -e "ES_JAVA_OPTS=-Xms512m -Xmx512m" \
-  elasticsearch-thai
+docker run -d --name elasticsearch-thai -p 9200:9200 -e "discovery.type=single-node" -e "ES_JAVA_OPTS=-Xms1g -Xmx1g" -e "xpack.security.enabled=false" -e "xpack.security.http.ssl.enabled=false" -e "xpack.security.transport.ssl.enabled=false" elasticsearch-thai
 
 # ตรวจสอบว่า Elasticsearch ทำงาน
 curl http://localhost:9200
